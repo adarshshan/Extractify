@@ -16,6 +16,7 @@ export interface NanoNetsResponse {
   result: [
     {
       prediction: NanoNetsPrediction[];
+      raw_ocr_api_response: any;
     }
   ];
 }

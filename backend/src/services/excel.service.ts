@@ -25,8 +25,8 @@ export const generateExcelFile = async (record: IRecord): Promise<string> => {
   for (const [field, data] of Object.entries(extractedData)) {
     worksheet.addRow({
       field: field,
-      value: data.value,
-      confidence: data.confidence.toFixed(4),
+      value: data?.value ?? "Sample value",
+      confidence: data?.confidence?.toFixed(4) ?? "Sample Data...",
     });
   }
 
