@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from './services/api.service';
 import { saveAs } from 'file-saver';
@@ -17,7 +17,7 @@ export class App {
   reportId: string | null = null;
   isProcessing: boolean = false;
 
-  constructor(private apiService: ApiService) {}
+  constructor(private apiService: ApiService, private cdr: ChangeDetectorRef) {}
 
   onFileSelected(event: Event) {
     const element = event.target as HTMLInputElement;
@@ -40,17 +40,19 @@ export class App {
     this.isProcessing = true;
     this.status = 'Uploading and processing PDF...';
 
-    this.apiService.uploadPdf(this.selectedFile).subscribe({
+    this.apiService.uploadPdf(this?.selectedFile).subscribe({
       next: (response) => {
         this.status = `Processing complete: ${response.message}`;
         this.reportId = response.reportId;
         this.isProcessing = false;
+        this.cdr.detectChanges();
       },
       error: (error) => {
         this.status = `Error: ${error.message}`;
         console.error('Upload error', error);
         this.isProcessing = false;
-      }
+        this.cdr.detectChanges();
+      },
     });
   }
 
@@ -69,7 +71,7 @@ export class App {
       error: (error) => {
         this.status = `Error downloading: ${error.message}`;
         console.error('Download error', error);
-      }
+      },
     });
   }
 }
