@@ -16,6 +16,8 @@ export const connectToDB = async () => {
 };
 
 export const saveRecord = async (data: Partial<IRecord>): Promise<IRecord> => {
+  console.log("data from mongodb save...");
+  console.log(data);
   const record = new Record(data);
   return record.save();
 };

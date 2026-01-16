@@ -14,8 +14,9 @@ export const handleExtraction = async (
   res: Response,
   next: NextFunction
 ) => {
-  if (!req.file)
+  if (!req.file) {
     return res.status(400).json({ message: "No PDF file uploaded." });
+  }
 
   const pdfPath = req.file.path;
   let imagePaths: string[] = [];
@@ -24,58 +25,103 @@ export const handleExtraction = async (
     // 1. Convert PDF to images
     imagePaths = await convertPdfToImages(pdfPath);
 
+    // We'll collect both: legacy key-value style + proper table cells
     const allExtractedData = new Map<
       string,
       { value: any; confidence: number }
     >();
 
+    // ── New: Collect table structure ───────────────────────────────
+    interface TableCell {
+      row: number;
+      col: number;
+      text: string;
+      label: string;
+      confidence?: number; // we'll try to use prediction confidence
+      verification_status?: string;
+    }
+
+    const tableCells: TableCell[] = [];
+
     // 2. OCR each image
     for (const imagePath of imagePaths) {
       const ocrResult = await ocrImageWithNanoNets(imagePath);
-      const predictions = ocrResult?.result[0]?.prediction || [];
+      const predictions = ocrResult?.result?.[0]?.prediction || [];
 
-      console.log("predictions");
-      console.log(predictions);
+      console.log("Predictions for", imagePath);
+      console.log(JSON.stringify(predictions, null, 2));
 
-      predictions.forEach((pred) => {
-        // 3. Filter by confidence and normalize
-        if (pred?.confidence >= CONFIDENCE_THRESHOLD) {
-          const existing = allExtractedData.get(pred?.label);
-          // Overwrite if new confidence is higher
-          if (!existing || pred?.confidence > existing?.confidence) {
-            allExtractedData.set(pred?.label, {
-              value: normalizeText(pred?.ocr_text),
-              confidence: pred?.confidence,
+      predictions.forEach((pred: any) => {
+        // A. Legacy key-value extraction (if you still want it)
+        if (
+          pred?.confidence >= CONFIDENCE_THRESHOLD &&
+          pred?.label !== "table"
+        ) {
+          const existing = allExtractedData.get(pred.label);
+          if (!existing || pred.confidence > existing.confidence) {
+            allExtractedData.set(pred.label, {
+              value: normalizeText(pred.ocr_text),
+              confidence: pred.confidence,
             });
           }
         }
+
+        // B. Table extraction ── when we find a "table" prediction
+        if (pred?.label === "table" && pred?.cells?.length > 0) {
+          pred.cells.forEach((cell: any) => {
+            if (cell.text?.trim()) {
+              tableCells.push({
+                row: cell.row,
+                col: cell.col,
+                text: cell.text.trim(),
+                label: cell.label || "",
+                confidence: pred?.confidence || cell?.score || 0,
+                verification_status: cell?.verification_status,
+              });
+            }
+          });
+        }
+        console.log("..................tableCells...........");
+        console.log(tableCells);
       });
     }
 
-    // 4. Save to MongoDB
+    // 3. Prepare data to save
     const recordToSave = {
       fileName: req.file.originalname,
-      extractedData: Object.fromEntries(allExtractedData),
+      extractedData: allExtractedData, // optional – legacy
+      extractedTable: {
+        cells: tableCells,
+        // You could also add: rowsCount, columnsCount, page, etc. if useful
+      },
+      // Optional: keep raw predictions if you want debugging power
+      // rawPredictions: predictions (but can be huge – maybe only in dev)
     };
 
+    // 4. Save to MongoDB
     const savedRecord = await saveRecord(recordToSave as Partial<IRecord>);
 
-    // 5. Generate Excel
+    console.log("savedRecord");
+    console.log(savedRecord);
+
+    // 5. Generate Excel (now using table structure)
     const excelFileName = await generateExcelFile(savedRecord);
 
-    console.log("excelFileName");
-    console.log(excelFileName);
+    console.log("Generated Excel:", excelFileName);
 
-    // 6. Respond with the report ID (which is the excel file name for simplicity)
+    // 6. Response
     res.status(200).json({
       message: "Extraction successful!",
       reportId: excelFileName,
+      recordId: savedRecord._id?.toString(), // optional but useful
+      tableRowsCount:
+        tableCells.length > 0 ? Math.max(...tableCells.map((c) => c.row)) : 0,
     });
   } catch (error) {
-    console.log("The eror is catching here...");
+    console.error("Extraction error:", error);
     next(error);
   } finally {
-    // 7. Cleanup temp files
+    // 7. Cleanup
     cleanupFiles([pdfPath, ...imagePaths]);
   }
 };
