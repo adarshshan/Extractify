@@ -1,34 +1,60 @@
-import { Request, Response, NextFunction } from 'express';
-import { convertPdfToImages, cleanupFiles } from '../services/pdf.service';
-import { ocrImageWithNanoNets } from '../services/nanonets.service';
-import { saveRecord, getRecordById } from '../services/db.service';
-import { generateExcelFile } from '../services/excel.service';
-import { normalizeText } from '../utils/textNormalizer';
-import { IRecord } from '../models/record.model';
-import path from 'path';
+import { Request, Response, NextFunction } from "express";
+import { convertPdfToImages, cleanupFiles } from "../services/pdf.service";
+import { ocrImageWithNanoNets } from "../services/nanonets.service";
+import { saveRecord, getRecordById } from "../services/db.service";
+import { generateExcelFile } from "../services/excel.service";
+import { normalizeText } from "../utils/textNormalizer";
+import { IRecord } from "../models/record.model";
+import path from "path";
 
 const CONFIDENCE_THRESHOLD = 0.8;
 
-export const handleExtraction = async (req: Request, res: Response, next: NextFunction) => {
-  if (!req.file) {
-    return res.status(400).json({ message: 'No PDF file uploaded.' });
-  }
+export const handleExtraction = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  console.log("Hello World...");
+  if (!req.file)
+    return res.status(400).json({ message: "No PDF file uploaded." });
+
+  console.log("req.file");
+  console.log(req.file);
+  console.log("req.body");
+  console.log(req.body);
 
   const pdfPath = req.file.path;
   let imagePaths: string[] = [];
 
+  console.log("pdfPath");
+  console.log(pdfPath);
+
   try {
+    console.log("the pointer is inside the try block...");
     // 1. Convert PDF to images
     imagePaths = await convertPdfToImages(pdfPath);
 
-    const allExtractedData = new Map<string, { value: any; confidence: number }>();
+    console.log("---imagePaths");
+    console.log(imagePaths);
+
+    const allExtractedData = new Map<
+      string,
+      { value: any; confidence: number }
+    >();
+
+    console.log("allExtractedData");
+    console.log(allExtractedData);
 
     // 2. OCR each image
     for (const imagePath of imagePaths) {
       const ocrResult = await ocrImageWithNanoNets(imagePath);
-      const predictions = ocrResult.result[0]?.prediction || [];
+      console.log("ocrResult");
+      console.log(ocrResult);
+      const predictions = ocrResult?.result[0]?.prediction || [];
+      console.log("predictions");
+      console.log(predictions);
 
-      predictions.forEach(pred => {
+      predictions.forEach((pred) => {
         // 3. Filter by confidence and normalize
         if (pred.confidence >= CONFIDENCE_THRESHOLD) {
           const existing = allExtractedData.get(pred.label);
@@ -54,12 +80,16 @@ export const handleExtraction = async (req: Request, res: Response, next: NextFu
     // 5. Generate Excel
     const excelFileName = await generateExcelFile(savedRecord);
 
+    console.log("excelFileName");
+    console.log(excelFileName);
+
     // 6. Respond with the report ID (which is the excel file name for simplicity)
     res.status(200).json({
-      message: 'Extraction successful!',
+      message: "Extraction successful!",
       reportId: excelFileName,
     });
   } catch (error) {
+    console.log("The eror is catching here...");
     next(error);
   } finally {
     // 7. Cleanup temp files
@@ -67,19 +97,23 @@ export const handleExtraction = async (req: Request, res: Response, next: NextFu
   }
 };
 
-export const downloadReport = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { reportId } = req.params;
-      // In a real app, you'd validate this ID and check for user permissions
-      const filePath = path.join(process.cwd(), 'uploads', reportId);
-      
-      res.download(filePath, (err) => {
-          if (err) {
-              // Handle error, but don't expose file system details
-              res.status(404).send({ message: "Report not found." });
-          }
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
+export const downloadReport = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { reportId } = req.params;
+    // In a real app, you'd validate this ID and check for user permissions
+    const filePath = path.join(process.cwd(), "uploads", Date.now().toString());
+
+    res.download(filePath, (err) => {
+      if (err) {
+        // Handle error, but don't expose file system details
+        res.status(404).send({ message: "Report not found." });
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
