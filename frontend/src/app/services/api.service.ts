@@ -12,10 +12,9 @@ export class ApiService {
 
   uploadPdf(file: File): Observable<{ message: string; reportId: string }> {
     const formData = new FormData();
-    formData.append('file', file, file.name);
-    formData.append('name', 'Adarsh C'); //remove this after testing...
+    formData.append('file', file, file?.name);
     return this.http.post<{ message: string; reportId: string }>(
-      `${this.apiUrl}/extract`,
+      `${this?.apiUrl}/extract`,
       formData
     );
   }

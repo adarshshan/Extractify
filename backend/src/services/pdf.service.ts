@@ -30,9 +30,6 @@ export const convertPdfToImages = async (
     );
   }
 
-  // 🔴 IMPORTANT: pdf-poppler does NOT return pages
-  // We must manually read generated files
-
   const files = fs
     .readdirSync(tempDir)
     .filter((file) => file.startsWith(prefix) && file.endsWith(".png"))

@@ -14,55 +14,38 @@ export const handleExtraction = async (
   res: Response,
   next: NextFunction
 ) => {
-  console.log("Hello World...");
   if (!req.file)
     return res.status(400).json({ message: "No PDF file uploaded." });
-
-  console.log("req.file");
-  console.log(req.file);
-  console.log("req.body");
-  console.log(req.body);
 
   const pdfPath = req.file.path;
   let imagePaths: string[] = [];
 
-  console.log("pdfPath");
-  console.log(pdfPath);
-
   try {
-    console.log("the pointer is inside the try block...");
     // 1. Convert PDF to images
     imagePaths = await convertPdfToImages(pdfPath);
-
-    console.log("---imagePaths");
-    console.log(imagePaths);
 
     const allExtractedData = new Map<
       string,
       { value: any; confidence: number }
     >();
 
-    console.log("allExtractedData");
-    console.log(allExtractedData);
-
     // 2. OCR each image
     for (const imagePath of imagePaths) {
       const ocrResult = await ocrImageWithNanoNets(imagePath);
-      console.log("ocrResult");
-      console.log(ocrResult);
       const predictions = ocrResult?.result[0]?.prediction || [];
+
       console.log("predictions");
       console.log(predictions);
 
       predictions.forEach((pred) => {
         // 3. Filter by confidence and normalize
-        if (pred.confidence >= CONFIDENCE_THRESHOLD) {
-          const existing = allExtractedData.get(pred.label);
+        if (pred?.confidence >= CONFIDENCE_THRESHOLD) {
+          const existing = allExtractedData.get(pred?.label);
           // Overwrite if new confidence is higher
-          if (!existing || pred.confidence > existing.confidence) {
-            allExtractedData.set(pred.label, {
-              value: normalizeText(pred.ocr_text),
-              confidence: pred.confidence,
+          if (!existing || pred?.confidence > existing?.confidence) {
+            allExtractedData.set(pred?.label, {
+              value: normalizeText(pred?.ocr_text),
+              confidence: pred?.confidence,
             });
           }
         }
@@ -105,7 +88,7 @@ export const downloadReport = async (
   try {
     const { reportId } = req.params;
     // In a real app, you'd validate this ID and check for user permissions
-    const filePath = path.join(process.cwd(), "uploads", Date.now().toString());
+    const filePath = path.join(process.cwd(), "uploads", reportId + "");
 
     res.download(filePath, (err) => {
       if (err) {

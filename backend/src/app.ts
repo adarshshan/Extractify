@@ -32,8 +32,8 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 
 const startServer = async () => {
   await connectToDB();
-  app.listen(config.port, () => {
-    console.log(`Server is running on http://localhost:${config.port}`);
+  app.listen(config?.port, () => {
+    console.log(`Server is running on http://localhost:${config?.port}`);
   });
 };
 
