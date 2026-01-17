@@ -136,7 +136,60 @@ Asynchronous operations are handled using `async/await` with proper error handli
 -   **Synchronous Processing:** The frontend waits for the entire extraction and Excel generation process to complete on the backend. For very large PDFs, this might lead to a longer waiting time without granular progress updates.
 -   **Error Reporting:** Frontend error messages are basic. More detailed error handling and user feedback mechanisms could be implemented.
 -   **NanoNets Model Dependency:** The system relies entirely on a pre-trained NanoNets custom model. The structure and accuracy of the extracted data are directly dependent on the quality and training of this model.
--   **No User Authentication/Authorization:** This project does not include user management or authentication.
--   **Temporary Files Cleanup:** Temporary image files and uploaded PDFs are cleaned up after processing. Generated Excel files are kept in the `uploads` directory.
--   **`pdf2pic` Dependencies:** While `pdf2pic` is generally cross-platform, it relies on `GraphicsMagick` or `ImageMagick` being installed on the system where the backend runs. Ensure one of these is installed and configured in your environment PATH.
+-   **No User Authentication/Authorization:** ## Running with Docker
 
+This project is fully containerized and can be run using Docker and Docker Compose. This is the recommended way to run the application as it handles all dependencies and services automatically.
+
+### Prerequisites
+
+-   Docker Desktop (or Docker Engine and Docker Compose) installed on your machine.
+-   NanoNets account and API Key. You will also need a custom model ID from NanoNets configured for your document type.
+
+### 1. Create Environment File
+
+Create a `.env` file in the `backend` directory and add your environment variables:
+
+```
+# MongoDB
+MONGO_URI=mongodb://localhost:27017/document-extraction
+
+# NanoNets API
+NANONETS_API_KEY=YOUR_NANONETS_API_KEY
+NANONETS_MODEL_ID=YOUR_NANONETS_MODEL_ID
+
+# Server Port
+PORT=3000
+
+# Redis
+REDIS_HOST=redis
+REDIS_PORT=6379
+```
+
+-   Replace `YOUR_NANONETS_API_KEY` and `YOUR_NANONETS_MODEL_ID` with your actual NanoNets credentials.
+
+### 2. Build and Run the Application
+
+Open a terminal at the root of the project and run the following command:
+
+```bash
+docker-compose up --build
+```
+
+This command will:
+- Build the Docker images for the frontend and backend services.
+- Start the frontend, backend, and redis containers.
+
+### 3. Access the Application
+
+-   The frontend will be accessible at `http://localhost`.
+-   The backend API will be running on `http://localhost:3000`.
+
+The frontend is configured to proxy API requests to the backend, so you can use the application seamlessly.
+
+### How to Stop the Application
+
+To stop the application, press `Ctrl + C` in the terminal where `docker-compose` is running. To remove the containers, run:
+
+```bash
+docker-compose down
+```

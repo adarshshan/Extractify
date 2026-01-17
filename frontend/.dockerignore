@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+.gitignore
+Dockerfile
+README.md
+nginx.conf
+.angular
+.vscode
