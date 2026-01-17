@@ -35,7 +35,7 @@ export const getPdfPageCount = async (pdfPath: string): Promise<number> => {
 export const convertPdfToImages = async (
   pdfPath: string,
   startPage: number,
-  endPage: number
+  endPage: number,
 ): Promise<string[]> => {
   const prefix = `page-${Date.now()}`;
   const options = {
@@ -54,7 +54,7 @@ export const convertPdfToImages = async (
   } catch (error) {
     console.error("PDF conversion failed:", error);
     throw new Error(
-      "PDF to image conversion failed. Ensure Poppler is installed and compatible."
+      "PDF to image conversion failed. Ensure Poppler is installed and compatible.",
     );
   }
 
@@ -75,16 +75,18 @@ export const convertPdfToImages = async (
   }
 
   // Fallback to reading the directory if direct matching fails
-  if (generatedFiles.length !== (endPage - startPage + 1)) {
+  if (generatedFiles.length !== endPage - startPage + 1) {
     const files = fs
       .readdirSync(tempDir)
       .filter((file) => file.startsWith(prefix) && file.endsWith(".png"))
       .map((file) => path.join(tempDir, file));
-    
+
     if (files.length === 0) {
       // It's possible poppler is still working. We could add a small delay and retry.
       // For now, we'll throw.
-      throw new Error(`No images were generated for pages ${startPage}-${endPage}.`);
+      throw new Error(
+        `No images were generated for pages ${startPage}-${endPage}.`,
+      );
     }
     return files;
   }

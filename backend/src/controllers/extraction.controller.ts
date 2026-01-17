@@ -6,7 +6,7 @@ import { pdfExtractionQueue } from "../queues/pdfExtraction.queue";
 export const handleExtraction = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   if (!req.file) {
     return res.status(400).json({ message: "No PDF file uploaded." });
@@ -17,6 +17,9 @@ export const handleExtraction = async (
       pdfPath: req.file.path,
       originalFileName: req.file.originalname,
     });
+
+    console.log("this is the job");
+    console.log(job);
 
     res.status(202).json({
       message: "PDF processing has been queued.",
@@ -35,7 +38,7 @@ export const handleExtraction = async (
 export const getJobStatus = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   const { jobId } = req.params;
   if (!jobId) {
@@ -45,14 +48,28 @@ export const getJobStatus = async (
   try {
     const job = await pdfExtractionQueue.getJob(jobId + "");
 
+    console.log("job status.............");
+    console.log(job);
+
     if (!job) {
       return res.status(404).json({ message: "Job not found." });
     }
 
     const state = await job.getState();
+    console.log(".....state.....");
+    console.log(state);
+
     const progress = job.progress;
+    console.log("......progress.....");
+    console.log(progress);
+
     const returnValue = job.returnvalue;
+    console.log(",,....returnValue...");
+    console.log(returnValue);
+
     const failedReason = job.failedReason;
+    console.log("......failedReason..........");
+    console.log(failedReason);
 
     res.json({
       jobId: job.id,
@@ -70,7 +87,7 @@ export const getJobStatus = async (
 export const downloadReport = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const { reportId } = req.params;

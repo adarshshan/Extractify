@@ -1,36 +1,36 @@
-# Stage 1: Build the application
+# Stage 1: Build
 FROM node:20-alpine AS builder
 
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
 COPY package*.json ./
+RUN npm install --include=dev
 
-# Install all dependencies
-RUN npm install
-
-# Copy the rest of the application source code
 COPY . .
-
-# Compile TypeScript to JavaScript
 RUN npm run build
+RUN npm prune --production
 
-# Stage 2: Create the production image
+# Stage 2: Production
 FROM node:20-alpine
 
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
-COPY package*.json ./
+# Install minimal system deps (future-proof for PDF tools)
+RUN apk add --no-cache \
+  bash \
+  curl \
+  libc6-compat \
+  poppler-utils
 
-# Install only production dependencies
-RUN npm install --production
-
-# Copy the compiled code from the builder stage
+# Copy pruned node_modules, compiled code, and package.json from the builder stage
+COPY --from=builder /usr/src/app/package.json ./package.json
+COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/dist ./dist
 
-# Expose the port the app runs on
+# Create required directories
+RUN mkdir -p uploads temp
+
 EXPOSE 3000
 
-# Command to run the application
-CMD [ "node", "dist/app.js" ]
+CMD ["node", "dist/app.js"]
+

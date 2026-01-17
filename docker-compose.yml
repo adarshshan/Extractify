@@ -2,7 +2,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "80:80"
+      - "4200:80"
     depends_on:
       - backend
     networks:
@@ -12,8 +12,29 @@ services:
     build: ./backend
     ports:
       - "3000:3000"
+    env_file:
+      - ./backend/.env
     environment:
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - NODE_ENV=production
+    depends_on:
+      - redis
+    volumes:
+      - ./backend/uploads:/usr/src/app/uploads
+      - ./backend/temp:/usr/src/app/temp
+    networks:
+      - app-network
+
+  worker:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - NODE_ENV=production
+    command: node dist/workers/index.js
     depends_on:
       - redis
     volumes:
@@ -23,7 +44,9 @@ services:
       - app-network
 
   redis:
-    image: "redis:alpine"
+    image: redis:latest
+    ports:
+      - "6379:6379" # optional (for local debug)
     networks:
       - app-network
 

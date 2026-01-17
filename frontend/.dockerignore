@@ -4,6 +4,5 @@ dist
 .gitignore
 Dockerfile
 README.md
-nginx.conf
 .angular
 .vscode
