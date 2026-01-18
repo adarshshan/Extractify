@@ -15,11 +15,20 @@ export const connectToDB = async () => {
   }
 };
 
-export const saveRecord = async (data: Partial<IRecord>): Promise<IRecord> => {
-  console.log("data from mongodb save...");
-  console.log(data);
-  const record = new Record(data);
-  return record.save();
+export const saveRecord = async (
+  data: Partial<IRecord>,
+): Promise<IRecord | null> => {
+  console.log("pointer inside the saveRecord");
+  try {
+    console.log("data from mongodb save...");
+    console.log(data);
+    const record = new Record(data);
+    return record.save();
+  } catch (error) {
+    console.log("The issue is here in the db part");
+    console.log(error);
+    return null;
+  }
 };
 
 export const getRecordById = async (id: string): Promise<IRecord | null> => {

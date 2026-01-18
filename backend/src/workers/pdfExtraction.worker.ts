@@ -61,9 +61,13 @@ const worker = new Worker(
           ocrImageWithNanoNets(imagePath),
         );
         const ocrResults = await Promise.all(ocrPromises);
+        console.log("This is the ocrResults");
+        console.log(ocrResults);
 
         for (const ocrResult of ocrResults) {
           const predictions = ocrResult?.result?.[0]?.prediction || [];
+          console.log(`This is the prediction`);
+          console.log(predictions);
           predictions.forEach((pred: any) => {
             if (pred?.label === "table" && pred?.cells?.length > 0) {
               pred?.cells.forEach((cell: any) => {
@@ -81,12 +85,15 @@ const worker = new Worker(
               throw new Error("There is not any table in the pdf document!");
           });
         }
+      } catch (err) {
+        console.log("The error is coming herer...");
+        console.log(err as Error);
       } finally {
         // 3. Cleanup images for the current batch to save disk space
-        if (imagePaths.length > 0) {
+        if (imagePaths?.length > 0) {
           cleanupFiles(imagePaths);
           console.log(
-            `[WORKER] Cleaned up ${imagePaths.length} temporary images.`,
+            `[WORKER] Cleaned up ${imagePaths?.length} temporary images.`,
           );
         }
       }
@@ -100,7 +107,7 @@ const worker = new Worker(
     };
 
     const savedRecord = await saveRecord(recordToSave as Partial<IRecord>);
-    console.log(`[WORKER] Saved record ${savedRecord._id} to database.`);
+    console.log(`[WORKER] Saved record ${savedRecord?._id} to database.`);
 
     // 5. Generate the final Excel report
     const excelFileName = await generateExcelFile(savedRecord);
@@ -113,7 +120,7 @@ const worker = new Worker(
     // The return value of the job, which can be retrieved by the client
     return {
       reportId: excelFileName,
-      recordId: savedRecord._id?.toString(),
+      recordId: savedRecord?._id?.toString(),
     };
   },
   { connection: redisConnection, concurrency: 5 }, // Process up to 5 jobs concurrently

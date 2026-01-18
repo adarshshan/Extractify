@@ -1,6 +1,9 @@
 import path from "path";
 import fs from "fs";
-import pdf from "pdf-poppler";
+import { promisify } from "util";
+import { exec } from "child_process";
+
+const execAsync = promisify(exec);
 
 const tempDir = path.join(process.cwd(), "temp");
 if (!fs.existsSync(tempDir)) {
@@ -8,25 +11,27 @@ if (!fs.existsSync(tempDir)) {
 }
 
 /**
- * Gets the total number of pages in a PDF file.
+ * Gets the total number of pages in a PDF file using pdfinfo.
  * This is a fast operation that only reads the PDF metadata.
  */
 export const getPdfPageCount = async (pdfPath: string): Promise<number> => {
   try {
-    const info = await pdf.info(pdfPath);
-    const pages = info.pages;
-    if (pages === null) {
-      throw new Error("Could not determine number of pages.");
+    // The command returns metadata. We grep for the 'Pages' line.
+    const command = `pdfinfo "${pdfPath}" | grep "Pages:"`;
+    const { stdout } = await execAsync(command);
+    const pagesMatch = stdout.match(/Pages:\s*(\d+)/);
+    if (!pagesMatch || !pagesMatch[1]) {
+      throw new Error("Could not parse page count from pdfinfo output.");
     }
-    return pages;
+    return parseInt(pagesMatch[1], 10);
   } catch (error) {
-    console.error("Failed to get PDF info:", error);
+    console.error("Failed to get PDF info with pdfinfo:", error);
     throw new Error("Failed to get PDF page count.");
   }
 };
 
 /**
- * Converts a range of pages from a PDF into images.
+ * Converts a range of pages from a PDF into PNG images using pdftocairo.
  * @param pdfPath The path to the PDF file.
  * @param startPage The first page to convert (1-based).
  * @param endPage The last page to convert (inclusive).
@@ -37,67 +42,56 @@ export const convertPdfToImages = async (
   startPage: number,
   endPage: number,
 ): Promise<string[]> => {
-  const prefix = `page-${Date.now()}`;
-  const options = {
-    format: "png",
-    out_dir: tempDir,
-    out_prefix: prefix,
-    // Use the -f and -l flags to specify the page range
-    f: startPage,
-    l: endPage,
-  };
+  // Generate a unique prefix for the output files to avoid collisions.
+  const outputPrefix = path.join(tempDir, `page-${Date.now()}`);
+
+  // pdftocairo is used as it's modern and handles PNGs well.
+  // The command syntax is: pdftocairo [options] <PDF-file> <output-prefix>
+  // The output files will be named <output-prefix>-<page_number>.png
+  const command = `pdftocairo -png -f ${startPage} -l ${endPage} "${pdfPath}" "${outputPrefix}"`;
 
   try {
-    // pdf-poppler's 'convert' function was changed to 'pdfToImg' in some versions.
-    // We will use 'convert' as it is in the original code, but this is a common source of error.
-    await pdf.convert(pdfPath, options);
+    await execAsync(command);
   } catch (error) {
-    console.error("PDF conversion failed:", error);
+    console.error("PDF conversion with pdftocairo failed:", error);
     throw new Error(
-      "PDF to image conversion failed. Ensure Poppler is installed and compatible.",
+      "PDF to image conversion failed. Ensure poppler-utils is installed.",
     );
   }
 
-  // Generate the expected filenames based on the prefix and page range
+  // Find the generated files by looking for the prefix.
   const generatedFiles: string[] = [];
-  for (let i = startPage; i <= endPage; i++) {
-    // The filename format depends on the number of total pages (e.g., page-01, page-1)
-    // This is a simplification. A more robust solution would read the directory
-    // and match the prefix, but this is faster if the naming is predictable.
-    const paddedPage = i.toString(); // pdf-poppler might pad with zeros, e.g., '01', '02'
-    const filePath = path.join(tempDir, `${prefix}-${paddedPage}.png`);
+  const filesInTemp = fs.readdirSync(tempDir);
+  const basePrefix = path.basename(outputPrefix);
 
-    // We check if the file exists because readdirSync is slow and this is more direct.
-    // This part can be tricky as poppler's output format can vary.
-    if (fs.existsSync(filePath)) {
-      generatedFiles.push(filePath);
+  for (const file of filesInTemp) {
+    if (file.startsWith(basePrefix) && file.endsWith(".png")) {
+      generatedFiles.push(path.join(tempDir, file));
     }
   }
 
-  // Fallback to reading the directory if direct matching fails
-  if (generatedFiles.length !== endPage - startPage + 1) {
-    const files = fs
-      .readdirSync(tempDir)
-      .filter((file) => file.startsWith(prefix) && file.endsWith(".png"))
-      .map((file) => path.join(tempDir, file));
-
-    if (files.length === 0) {
-      // It's possible poppler is still working. We could add a small delay and retry.
-      // For now, we'll throw.
-      throw new Error(
-        `No images were generated for pages ${startPage}-${endPage}.`,
-      );
-    }
-    return files;
+  if (generatedFiles.length === 0) {
+    // This can happen if the process fails silently or there's a permission issue.
+    throw new Error(
+      `No images were generated for pages ${startPage}-${endPage}.`,
+    );
   }
 
   return generatedFiles;
 };
 
+/**
+ * Deletes an array of files.
+ * @param files The array of file paths to delete.
+ */
 export const cleanupFiles = (files: string[]) => {
   files.forEach((file) => {
     if (fs.existsSync(file)) {
-      fs.unlinkSync(file);
+      try {
+        fs.unlinkSync(file);
+      } catch (error) {
+        console.error(`Failed to delete file: ${file}`, error);
+      }
     }
   });
 };

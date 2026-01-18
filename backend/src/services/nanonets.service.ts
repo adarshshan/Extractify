@@ -21,12 +21,12 @@ export interface NanoNetsResponse {
     {
       prediction: NanoNetsPrediction[];
       raw_ocr_api_response: any;
-    }
+    },
   ];
 }
 
 export const ocrImageWithNanoNets = async (
-  imagePath: string
+  imagePath: string,
 ): Promise<NanoNetsResponse> => {
   if (!config.nanonets.apiKey || !config.nanonets.modelId) {
     throw new Error("NanoNets API key or Model ID is not configured.");
@@ -43,10 +43,13 @@ export const ocrImageWithNanoNets = async (
       headers: {
         ...form.getHeaders(),
         Authorization: `Basic ${Buffer.from(
-          `${config.nanonets.apiKey}:`
+          `${config?.nanonets?.apiKey}:`,
         ).toString("base64")}`,
       },
     });
+
+    console.log("this is the response after nanonet api call");
+    console.log(response);
 
     return response.data;
   });
