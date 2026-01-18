@@ -37,6 +37,7 @@ const worker = new Worker(
     }
 
     const allTableCells: any[] = [];
+    let totalRows = 0;
     const allExtractedData = new Map<
       string,
       { value: any; confidence: number }
@@ -61,19 +62,30 @@ const worker = new Worker(
           ocrImageWithNanoNets(imagePath),
         );
         const ocrResults = await Promise.all(ocrPromises);
-        console.log("This is the ocrResults");
-        console.log(ocrResults);
 
         for (const ocrResult of ocrResults) {
           const predictions = ocrResult?.result?.[0]?.prediction || [];
-          console.log(`This is the prediction`);
-          console.log(predictions);
+          let maxRowCurrentPage = 0;
+
+          // First pass: find the max row number on the current page
           predictions.forEach((pred: any) => {
+            if (pred?.label === "table" && pred?.cells?.length > 0) {
+              pred.cells.forEach((cell: any) => {
+                if (cell.row > maxRowCurrentPage) {
+                  maxRowCurrentPage = cell.row;
+                }
+              });
+            }
+          });
+
+          // Second pass: process and push cells with updated row numbers
+          const pageCells: any[] = [];
+          predictions.forEach((pred: any, index: number) => {
             if (pred?.label === "table" && pred?.cells?.length > 0) {
               pred?.cells.forEach((cell: any) => {
                 if (normalizeText(cell?.text)) {
-                  allTableCells.push({
-                    row: cell?.row,
+                  pageCells.push({
+                    row: cell?.row + totalRows, // Add the offset here
                     col: cell?.col,
                     text: normalizeText(cell?.text),
                     label: cell?.label || "",
@@ -81,12 +93,13 @@ const worker = new Worker(
                   });
                 }
               });
-            } else
-              throw new Error("There is not any table in the pdf document!");
+            } else console.log(`Cannot find the table in the page ${index}`);
           });
+
+          allTableCells.push(...pageCells);
+          totalRows += maxRowCurrentPage; // Update totalRows for the next page
         }
       } catch (err) {
-        console.log("The error is coming herer...");
         console.log(err as Error);
       } finally {
         // 3. Cleanup images for the current batch to save disk space
