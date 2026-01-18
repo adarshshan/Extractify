@@ -10,7 +10,7 @@ import {
   cleanupFiles,
 } from "../services/pdf.service";
 import { ocrImageWithNanoNets } from "../services/nanonets.service";
-import { saveRecord } from "../services/db.service";
+import { saveRecord, updateRecord } from "../services/db.service";
 import { generateExcelFile } from "../services/excel.service";
 import { normalizeText } from "../utils/textNormalizer";
 import { IRecord } from "../models/record.model";
@@ -126,7 +126,12 @@ const worker = new Worker(
     const excelFileName = await generateExcelFile(savedRecord);
     console.log(`[WORKER] Generated Excel report: ${excelFileName}`);
 
-    // 6. Cleanup the original PDF file
+    // 6. Update the record with the excel file name
+    if (savedRecord) {
+      await updateRecord(savedRecord._id.toString(), { excelFileName });
+    }
+
+    // 7. Cleanup the original PDF file
     cleanupFiles([pdfPath]);
     console.log(`[WORKER] Cleaned up original PDF file: ${pdfPath}`);
 

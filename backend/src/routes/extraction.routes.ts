@@ -3,10 +3,15 @@ import {
   handleExtraction,
   downloadReport,
   getJobStatus,
+  getRecords,
 } from "../controllers/extraction.controller";
 import { upload } from "../utils/fileHandler";
 
 const router = Router();
+
+// GET /api/records
+// Retrieves a list of all processed document records.
+router.get("/records", getRecords);
 
 // POST /api/extract
 // Handles the PDF upload and initiates the extraction process.

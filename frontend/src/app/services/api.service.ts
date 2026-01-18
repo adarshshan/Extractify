@@ -20,6 +20,14 @@ export interface JobStatus {
   failedReason: string | null;
 }
 
+export interface IRecord {
+  _id: string;
+  fileName: string;
+  createdAt: string;
+  reportId: string;
+  excelFileName?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -27,6 +35,14 @@ export class ApiService {
   private apiUrl = '/api'; // Backend API URL
 
   constructor(private http: HttpClient) {}
+
+  /**
+   * Fetches all records from the backend.
+   * @returns An Observable with an array of records.
+   */
+  getRecords(): Observable<IRecord[]> {
+    return this.http.get<IRecord[]>(`${this.apiUrl}/records`);
+  }
 
   /**
    * Uploads the PDF and starts the extraction job.

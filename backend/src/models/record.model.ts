@@ -24,6 +24,7 @@ interface IExtractedTable {
 export interface IRecord extends Document {
   _id: Types.ObjectId; // Mongoose auto-generates this
   fileName: string;
+  excelFileName?: string; // Add this line
   extractedData?: Map<string, IExtractedField>; // ← legacy / form-like fields (optional now)
   extractedTable?: IExtractedTable; // ← main tabular data (voter list, etc.)
   rawOcrResult?: any; // optional – for debugging only (can be large)
@@ -66,6 +67,10 @@ const RecordSchema = new Schema<IRecord>(
     fileName: {
       type: String,
       required: true,
+      trim: true,
+    },
+    excelFileName: {
+      type: String,
       trim: true,
     },
 

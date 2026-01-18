@@ -1,7 +1,28 @@
 import { Request, Response, NextFunction } from "express";
 import path from "path";
-import { addPdfExtractionJob } from "../services/queue.service";
-import { pdfExtractionQueue } from "../queues/pdfExtraction.queue";
+
+import {
+  addPdfExtractionJob
+} from "../services/queue.service";
+import {
+  pdfExtractionQueue
+} from "../queues/pdfExtraction.queue";
+import {
+  getAllRecords
+} from "../services/db.service";
+
+export const getRecords = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const records = await getAllRecords();
+    res.json(records);
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const handleExtraction = async (
   req: Request,
@@ -9,7 +30,9 @@ export const handleExtraction = async (
   next: NextFunction,
 ) => {
   if (!req.file) {
-    return res.status(400).json({ message: "No PDF file uploaded." });
+    return res.status(400).json({
+      message: "No PDF file uploaded."
+    });
   }
 
   try {
