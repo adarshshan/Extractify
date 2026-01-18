@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService, JobStatus } from './services/api.service';
 import { saveAs } from 'file-saver';
@@ -24,7 +24,10 @@ export class App implements OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  constructor(private apiService: ApiService) {}
+  constructor(
+    private apiService: ApiService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -39,6 +42,7 @@ export class App implements OnDestroy {
     this.error = null;
     this.finalReportId = null;
     this.statusMessage = 'Uploading file...';
+    this.cdr.detectChanges();
 
     this.apiService
       .startExtractionJob(file)
@@ -70,11 +74,13 @@ export class App implements OnDestroy {
             this.error = status.failedReason ?? 'An unknown error occurred.';
             this.statusMessage = 'Processing failed.';
           }
+          this.cdr.detectChanges();
         },
         error: (err) => {
           this.isProcessing = false;
           this.error = err.message || 'Failed to start the extraction process.';
           this.statusMessage = 'Error.';
+          this.cdr.detectChanges();
         },
       });
   }

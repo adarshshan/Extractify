@@ -12,7 +12,9 @@ export const pdfExtractionQueue = new Queue(PDF_EXTRACTION_JOB, {
       type: "exponential",
       delay: 5000, // Start with a 5-second delay
     },
-    removeOnComplete: true, // Clean up completed jobs
+    removeOnComplete: {
+      age: 3600, // Keep completed jobs for 1 hour
+    },
     removeOnFail: {
       count: 1000, // Keep the last 1000 failed jobs for debugging
     },
