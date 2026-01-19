@@ -205,7 +205,7 @@ This command will:
 
 ### 3. Access the Application
 
--   The frontend will be accessible at `http://localhost`.
+-   The frontend will be accessible at `http://localhost:4200`.
 -   The backend API will be running on `http://localhost:3000`.
 
 The frontend is configured to proxy API requests to the backend, so you can use the application seamlessly.
