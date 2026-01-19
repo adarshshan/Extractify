@@ -10,19 +10,15 @@ import { upload } from "../utils/fileHandler";
 const router = Router();
 
 // GET /api/records
-// Retrieves a list of all processed document records.
-router.get("/records", getRecords);
+router.get("/records", getRecords); //retrives previous records
 
 // POST /api/extract
-// Handles the PDF upload and initiates the extraction process.
-router.post("/extract", upload.single("file"), handleExtraction);
+router.post("/extract", upload.single("file"), handleExtraction); //uploads and process the pdf
 
 // GET /api/status/:jobId
-// Poll this endpoint to get the status of a job.
-router.get("/status/:jobId", getJobStatus);
+router.get("/status/:jobId", getJobStatus); //polling api - to get status
 
 // GET /api/download/:reportId
-// Allows downloading the generated Excel report.
-router.get("/download/:reportId", downloadReport);
+router.get("/download/:reportId", downloadReport); //To download the generated Excel reports
 
 export default router;

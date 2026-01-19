@@ -1,15 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import path from "path";
-
-import {
-  addPdfExtractionJob
-} from "../services/queue.service";
-import {
-  pdfExtractionQueue
-} from "../queues/pdfExtraction.queue";
-import {
-  getAllRecords
-} from "../services/db.service";
+import { addPdfExtractionJob } from "../services/queue.service";
+import { pdfExtractionQueue } from "../queues/pdfExtraction.queue";
+import { getAllRecords } from "../services/db.service";
 
 export const getRecords = async (
   req: Request,
@@ -31,7 +24,7 @@ export const handleExtraction = async (
 ) => {
   if (!req.file) {
     return res.status(400).json({
-      message: "No PDF file uploaded."
+      message: "No PDF file uploaded.",
     });
   }
 
@@ -41,12 +34,9 @@ export const handleExtraction = async (
       originalFileName: req.file.originalname,
     });
 
-    console.log("this is the job");
-    console.log(job);
-
     res.status(202).json({
       message: "PDF processing has been queued.",
-      jobId: job.id,
+      jobId: job?.id,
     });
   } catch (error) {
     console.error("Failed to queue job:", error);
@@ -54,10 +44,6 @@ export const handleExtraction = async (
   }
 };
 
-/**
- * Gets the status of a job.
- * The client will poll this endpoint.
- */
 export const getJobStatus = async (
   req: Request,
   res: Response,
@@ -71,31 +57,15 @@ export const getJobStatus = async (
   try {
     const job = await pdfExtractionQueue.getJob(jobId + "");
 
-    console.log("job status.............");
-    console.log(job);
-
-    if (!job) {
-      return res.status(404).json({ message: "Job not found." });
-    }
+    if (!job) return res.status(404).json({ message: "Job not found." });
 
     const state = await job.getState();
-    console.log(".....state.....");
-    console.log(state);
-
-    const progress = job.progress;
-    console.log("......progress.....");
-    console.log(progress);
-
-    const returnValue = job.returnvalue;
-    console.log(",,....returnValue...");
-    console.log(returnValue);
-
-    const failedReason = job.failedReason;
-    console.log("......failedReason..........");
-    console.log(failedReason);
+    const progress = job?.progress;
+    const returnValue = job?.returnvalue;
+    const failedReason = job?.failedReason;
 
     res.json({
-      jobId: job.id,
+      jobId: job?.id,
       state,
       progress,
       returnValue,
@@ -117,9 +87,7 @@ export const downloadReport = async (
     const filePath = path.join(process.cwd(), "uploads", reportId + "");
 
     res.download(filePath, (err) => {
-      if (err) {
-        res.status(404).send({ message: "Report not found." });
-      }
+      if (err) res.status(404).send({ message: "Report not found." });
     });
   } catch (error) {
     next(error);

@@ -14,13 +14,10 @@ import { saveRecord, updateRecord } from "../services/db.service";
 import { generateExcelFile } from "../services/excel.service";
 import { normalizeText } from "../utils/textNormalizer";
 import { IRecord } from "../models/record.model";
-import path from "path";
 
 const BATCH_SIZE = 10; // Process 10 pages at a time. Configurable.
 const CONFIDENCE_THRESHOLD = 0.8;
 
-// The worker is defined with the job name and a processor function.
-// The processor function is where the actual work is done.
 const worker = new Worker(
   PDF_EXTRACTION_JOB,
   async (job: Job<PdfExtractionJobData>) => {
@@ -30,7 +27,6 @@ const worker = new Worker(
     let totalPages = 0;
     try {
       totalPages = await getPdfPageCount(pdfPath);
-      console.log(`[WORKER] PDF has ${totalPages} pages.`);
     } catch (error) {
       console.error(`[WORKER] Failed to get page count for ${pdfPath}`, error);
       throw error; // This will cause the job to fail.
@@ -70,9 +66,9 @@ const worker = new Worker(
           // First pass: find the max row number on the current page
           predictions.forEach((pred: any) => {
             if (pred?.label === "table" && pred?.cells?.length > 0) {
-              pred.cells.forEach((cell: any) => {
-                if (cell.row > maxRowCurrentPage) {
-                  maxRowCurrentPage = cell.row;
+              pred?.cells.forEach((cell: any) => {
+                if (cell?.row > maxRowCurrentPage) {
+                  maxRowCurrentPage = cell?.row;
                 }
               });
             }

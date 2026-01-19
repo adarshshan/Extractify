@@ -8,7 +8,7 @@ import pLimit from "p-limit";
 // Create a limiter that will execute at most 5 promises concurrently.
 const limit = pLimit(5);
 
-const NANO_API_URL = `https://app.nanonets.com/api/v2/OCR/Model/${config.nanonets.modelId}/LabelFile/`;
+const NANO_API_URL = `https://app.nanonets.com/api/v2/OCR/Model/${config?.nanonets?.modelId}/LabelFile/`;
 
 interface NanoNetsPrediction {
   label: string;
@@ -48,9 +48,6 @@ export const ocrImageWithNanoNets = async (
       },
     });
 
-    console.log("this is the response after nanonet api call");
-    console.log(response);
-
-    return response.data;
+    return response?.data;
   });
 };
