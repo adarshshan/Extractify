@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-// Interface for the initial job creation response
 export interface JobCreationResponse {
   message: string;
   jobId: string;
@@ -36,30 +35,16 @@ export class ApiService {
 
   constructor(private http: HttpClient) {}
 
-  /**
-   * Fetches all records from the backend.
-   * @returns An Observable with an array of records.
-   */
   getRecords(): Observable<IRecord[]> {
     return this.http.get<IRecord[]>(`${this.apiUrl}/records`);
   }
 
-  /**
-   * Uploads the PDF and starts the extraction job.
-   * @param file The PDF file to upload.
-   * @returns An Observable with the job creation response.
-   */
   startExtractionJob(file: File): Observable<JobCreationResponse> {
     const formData = new FormData();
     formData.append('file', file, file.name);
     return this.http.post<JobCreationResponse>(`${this.apiUrl}/extract`, formData);
   }
 
-  /**
-   * Gets the status of a specific job.
-   * @param jobId The ID of the job to check.
-   * @returns An Observable with the job's current status.
-   */
   getJobStatus(jobId: string): Observable<JobStatus> {
     return this.http.get<JobStatus>(`${this.apiUrl}/status/${jobId}`);
   }
