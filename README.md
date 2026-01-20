@@ -4,53 +4,53 @@ This project provides a full-stack solution to extract structured data from PDF 
 
 ## Tech Stack
 
--   **Frontend:** Angular (latest stable) with TypeScript
--   **Styling:** Tailwind CSS
--   **Backend:** Node.js with TypeScript (Express)
--   **Database:** MongoDB with Mongoose
--   **AI OCR:** NanoNets OCR API
--   **Excel Generation:** `exceljs`
--   **PDF Processing:** `pdf2pic`
--   **Job Queue:** Redis with BullMQ
--   **File Upload:** `multer`
--   **HTTP Client:** `axios`
+- **Frontend:** Angular (latest stable) with TypeScript
+- **Styling:** Tailwind CSS
+- **Backend:** Node.js with TypeScript (Express)
+- **Database:** MongoDB with Mongoose
+- **AI OCR:** NanoNets OCR API
+- **Excel Generation:** `exceljs`
+- **PDF Processing:** `pdf2pic`
+- **Job Queue:** Redis with BullMQ
+- **File Upload:** `multer`
+- **HTTP Client:** `axios`
 
 ## Features
 
--   **Frontend:**
-    -   Upload multi-page PDF files.
-    -   Trigger the extraction process.
-    -   Display basic processing status (uploading, processing, completed).
-    -   View a list of previous uploads and download their Excel reports.
-    -   Download the generated Excel (.xlsx) file.
--   **Backend:**
-    -   Secure PDF upload endpoint.
-    -   Asynchronous PDF processing using job queues and workers (Redis/BullMQ).
-    -   Conversion of each PDF page into an image.
-    -   Sending each image to the NanoNets OCR API.
-    -   Parsing NanoNets response into structured JSON with confidence scores.
-    -   Storing extracted structured data in MongoDB.
-    -   Storing generated Excel file names in the database for later retrieval.
-    -   Generating a structured Excel file from MongoDB records.
-    -   Providing an endpoint to list all previously processed records.
-    -   Providing an endpoint to download the Excel file.
--   **Accuracy & Data Handling:**
-    -   Handles repetitive structured fields across pages.
-    -   Ignores or nullifies fields with low confidence (< 0.8).
-    -   Normalizes extracted text (trimming).
-    -   Ensures structured field mapping consistency.
+- **Frontend:**
+  - Upload multi-page PDF files.
+  - Trigger the extraction process.
+  - Display basic processing status (uploading, processing, completed).
+  - View a list of previous uploads and download their Excel reports.
+  - Download the generated Excel (.xlsx) file.
+- **Backend:**
+  - Secure PDF upload endpoint.
+  - Asynchronous PDF processing using job queues and workers (Redis/BullMQ).
+  - Conversion of each PDF page into an image.
+  - Sending each image to the NanoNets OCR API.
+  - Parsing NanoNets response into structured JSON with confidence scores.
+  - Storing extracted structured data in MongoDB.
+  - Storing generated Excel file names in the database for later retrieval.
+  - Generating a structured Excel file from MongoDB records.
+  - Providing an endpoint to list all previously processed records.
+  - Providing an endpoint to download the Excel file.
+- **Accuracy & Data Handling:**
+  - Handles repetitive structured fields across pages.
+  - Ignores or nullifies fields with low confidence (< 0.8).
+  - Normalizes extracted text (trimming).
+  - Ensures structured field mapping consistency.
 
 ## Architecture
 
 The application follows a clean architecture with clear separation of concerns. A key enhancement is the introduction of a job queue system:
 
--   **Controllers:** Handle incoming requests and delegate to services. For PDF extraction, they add jobs to a Redis-backed queue.
--   **Services:** Contain the core business logic, interacting with external APIs and the database.
--   **Job Queues & Workers (Redis/BullMQ):** PDF processing (image conversion, OCR, Excel generation) is offloaded to background workers managed by BullMQ, using Redis as the message broker. This ensures that long-running tasks do not block the main API thread, improving responsiveness and scalability.
--   **Routes:** Define API endpoints.
--   **Models:** Define database schemas.
--   **Utils:** Helper functions for common tasks (e.g., file handling, text normalization).
--   **Config:** Manages environment variables.
+- **Controllers:** Handle incoming requests and delegate to services. For PDF extraction, they add jobs to a Redis-backed queue.
+- **Services:** Contain the core business logic, interacting with external APIs and the database.
+- **Job Queues & Workers (Redis/BullMQ):** PDF processing (image conversion, OCR, Excel generation) is offloaded to background workers managed by BullMQ, using Redis as the message broker. This ensures that long-running tasks do not block the main API thread, improving responsiveness and scalability.
+- **Routes:** Define API endpoints.
+- **Models:** Define database schemas.
+- **Utils:** Helper functions for common tasks (e.g., file handling, text normalization).
+- **Config:** Manages environment variables.
 
 Asynchronous operations are heavily utilized with `async/await` and robust error handling throughout the system.
 
@@ -58,11 +58,11 @@ Asynchronous operations are heavily utilized with `async/await` and robust error
 
 ### Prerequisites
 
--   Node.js (v18 or higher recommended)
--   npm (Node Package Manager)
--   MongoDB instance (local or cloud-hosted)
--   Redis server (local or cloud-hosted)
--   NanoNets account and API Key. You will also need a custom model ID from NanoNets configured for your document type.
+- Node.js (v18 or higher recommended)
+- npm (Node Package Manager)
+- MongoDB instance (local or cloud-hosted)
+- Redis server (local or cloud-hosted)
+- NanoNets account and API Key. You will also need a custom model ID from NanoNets configured for your document type.
 
 ### 1. Backend Setup
 
@@ -75,6 +75,7 @@ Asynchronous operations are heavily utilized with `async/await` and robust error
     npm install
     ```
 3.  Create a `.env` file in the `backend` directory and add your environment variables:
+
     ```
     # MongoDB
     MONGO_URI=mongodb://localhost:27017/document-extraction
@@ -89,10 +90,19 @@ Asynchronous operations are heavily utilized with `async/await` and robust error
     # Redis (for Job Queue)
     REDIS_HOST=127.0.0.1
     REDIS_PORT=6379
+
+    # Google Cloud Translation (Optional - for translation of extracted data)
+    # This is a service account key file.
+    # To generate: Google Cloud Console -> IAM & Admin -> Service Accounts -> Create Service Account
+    # -> Create Key (JSON) -> Download the JSON file and place it in the 'backend' directory
+    #    as 'googlekeyfortranslate.json'.
+    GOOGLE_APPLICATION_CREDENTIALS=./googlekeyfortranslate.json
     ```
-    -   Replace `YOUR_NANONETS_API_KEY` and `YOUR_NANONETS_MODEL_ID` with your actual NanoNets credentials.
-    -   Ensure your MongoDB instance is running and accessible at `MONGO_URI`.
-    -   Ensure your Redis server is running and accessible at `REDIS_HOST`:`REDIS_PORT`.
+
+    - Replace `YOUR_NANONETS_API_KEY` and `YOUR_NANONETS_MODEL_ID` with your actual NanoNets credentials.
+    - Ensure your MongoDB instance is running and accessible at `MONGO_URI`.
+    - Ensure your Redis server is running and accessible at `REDIS_HOST`:`REDIS_PORT`.
+    - If using Google Cloud Translation ensure `googlekeyfortranslate.json` is correctly placed.
 
 4.  Build and run the backend:
     ```bash
@@ -156,18 +166,19 @@ Asynchronous operations are heavily utilized with `async/await` and robust error
 
 ## Known Limitations
 
--   **Error Reporting:** Frontend error messages are basic. More detailed error handling and user feedback mechanisms could be implemented.
--   **NanoNets Model Dependency:** The system relies entirely on a pre-trained NanoNets custom model. The structure and accuracy of the extracted data are directly dependent on the quality and training of this model.
--   **No User Authentication/Authorization:** This project does not include user authentication or authorization. It's intended as a proof-of-concept for data extraction and should not be used in production environments without adding proper security measures.
--   **Limited Document Types:** The system is optimized for structured documents with tables, particularly those for which the NanoNets model has been trained. Its performance on highly unstructured or different document types may vary.
+- **Error Reporting:** Frontend error messages are basic. More detailed error handling and user feedback mechanisms could be implemented.
+- **NanoNets Model Dependency:** The system relies entirely on a pre-trained NanoNets custom model. The structure and accuracy of the extracted data are directly dependent on the quality and training of this model.
+- **No User Authentication/Authorization:** This project does not include user authentication or authorization. It's intended as a proof-of-concept for data extraction and should not be used in production environments without adding proper security measures.
+- **Limited Document Types:** The system is optimized for structured documents with tables, particularly those for which the NanoNets model has been trained. Its performance on highly unstructured or different document types may vary.
+
 ## Running with Docker
 
 This project is fully containerized and can be run using Docker and Docker Compose. This is the recommended way to run the application as it handles all dependencies and services automatically.
 
 ### Prerequisites
 
--   Docker Desktop (or Docker Engine and Docker Compose) installed on your machine.
--   NanoNets account and API Key. You will also need a custom model ID from NanoNets configured for your document type.
+- Docker Desktop (or Docker Engine and Docker Compose) installed on your machine.
+- NanoNets account and API Key. You will also need a custom model ID from NanoNets configured for your document type.
 
 ### 1. Create Environment File
 
@@ -189,7 +200,7 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 ```
 
--   Replace `YOUR_NANONETS_API_KEY` and `YOUR_NANONETS_MODEL_ID` with your actual NanoNets credentials.
+- Replace `YOUR_NANONETS_API_KEY` and `YOUR_NANONETS_MODEL_ID` with your actual NanoNets credentials.
 
 ### 2. Build and Run the Application
 
@@ -200,13 +211,14 @@ docker-compose up --build
 ```
 
 This command will:
+
 - Build the Docker images for the frontend and backend services.
 - Start the frontend, backend, and redis containers.
 
 ### 3. Access the Application
 
--   The frontend will be accessible at `http://localhost:4200`.
--   The backend API will be running on `http://localhost:3000`.
+- The frontend will be accessible at `http://localhost:4200`.
+- The backend API will be running on `http://localhost:3000`.
 
 The frontend is configured to proxy API requests to the backend, so you can use the application seamlessly.
 

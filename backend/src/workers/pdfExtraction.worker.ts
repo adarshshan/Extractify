@@ -13,10 +13,10 @@ import { ocrImageWithNanoNets } from "../services/nanonets.service";
 import { saveRecord, updateRecord } from "../services/db.service";
 import { generateExcelFile } from "../services/excel.service";
 import { normalizeText } from "../utils/textNormalizer";
+import { translateText } from "../utils/translator"; // Import translator
 import { IRecord } from "../models/record.model";
 
 const BATCH_SIZE = 10; // Process 10 pages at a time. Configurable.
-const CONFIDENCE_THRESHOLD = 0.8;
 
 const worker = new Worker(
   PDF_EXTRACTION_JOB,
@@ -32,12 +32,7 @@ const worker = new Worker(
       throw error; // This will cause the job to fail.
     }
 
-    const allTableCells: any[] = [];
-    let totalRows = 0;
-    const allExtractedData = new Map<
-      string,
-      { value: any; confidence: number }
-    >();
+    const processedRows: any[] = [];
 
     // Process the PDF in batches
     for (let startPage = 1; startPage <= totalPages; startPage += BATCH_SIZE) {
@@ -50,10 +45,10 @@ const worker = new Worker(
 
       let imagePaths: string[] = [];
       try {
-        // 1. Convert one batch of pages to images
+        // Convert one batch of pages to images
         imagePaths = await convertPdfToImages(pdfPath, startPage, endPage);
 
-        // 2. OCR each image in the batch (with concurrency limiting)
+        // OCR each image in the batch (with concurrency limiting)
         const ocrPromises = imagePaths.map((imagePath) =>
           ocrImageWithNanoNets(imagePath),
         );
@@ -61,44 +56,68 @@ const worker = new Worker(
 
         for (const ocrResult of ocrResults) {
           const predictions = ocrResult?.result?.[0]?.prediction || [];
-          let maxRowCurrentPage = 0;
 
-          // First pass: find the max row number on the current page
+          let listPartNumber = "";
+          let electionWardNumber = "";
+
+          // Extract page-level data
           predictions.forEach((pred: any) => {
-            if (pred?.label === "table" && pred?.cells?.length > 0) {
+            if (pred?.label === "List_Part_Number") {
+              listPartNumber = normalizeText(pred?.ocr_text) || "";
+            }
+            if (pred?.label === "Election_Ward_Number") {
+              electionWardNumber = normalizeText(pred?.ocr_text) || "";
+            }
+          });
+
+          const currentPageTableData = new Map<number, any>(); // Map to hold data for rows on the current page
+
+          predictions.forEach((pred: any) => {
+            if (pred?.type === "table" && pred?.cells?.length > 0) {
               pred?.cells.forEach((cell: any) => {
-                if (cell?.row > maxRowCurrentPage) {
-                  maxRowCurrentPage = cell?.row;
+                if (normalizeText(cell?.text)) {
+                  const row = cell?.row;
+                  const label = cell?.label;
+                  const text = normalizeText(cell?.text);
+
+                  if (!currentPageTableData.has(row)) {
+                    currentPageTableData.set(row, {});
+                  }
+                  currentPageTableData.get(row)[label] = text;
                 }
               });
             }
           });
 
-          // Second pass: process and push cells with updated row numbers
-          const pageCells: any[] = [];
-          predictions.forEach((pred: any, index: number) => {
-            if (pred?.label === "table" && pred?.cells?.length > 0) {
-              pred?.cells.forEach((cell: any) => {
-                if (normalizeText(cell?.text)) {
-                  pageCells.push({
-                    row: cell?.row + totalRows, // Add the offset here
-                    col: cell?.col,
-                    text: normalizeText(cell?.text),
-                    label: cell?.label || "",
-                    confidence: pred?.confidence || cell?.score || 0,
-                  });
-                }
-              });
-            } else console.log(`Cannot find the table in the page ${index}`);
-          });
+          // Process grouped rows into structured objects
+          for (const rowData of currentPageTableData.values()) {
+            const wardNo = electionWardNumber || listPartNumber || "";
+            const fullName = rowData["Voter_Full_Name"] || "";
+            const fatherSpouseName = rowData["relative_name"] || "";
+            const gender = rowData["Gender"] || "";
 
-          allTableCells.push(...pageCells);
-          totalRows += maxRowCurrentPage; // Update totalRows for the next page
+            const translatedFullName = await translateText(fullName);
+            const translatedFatherSpouseName =
+              await translateText(fatherSpouseName);
+
+            processedRows.push({
+              "Sl No.": rowData["SL_No"] || "",
+              "Ward No.": wardNo,
+              "House Number": rowData["House_Number"] || "",
+              "Full Name": fullName,
+              "Full Name (En)": translatedFullName, // New translated field
+              "Father/Spouse Name": fatherSpouseName,
+              "Father/Spouse Name (En)": translatedFatherSpouseName, // New translated field
+              Gender: gender,
+              "Card Number": rowData["Voter_ID"] || "",
+              "Detail Code": rowData["Detail_Code"] || "",
+            });
+          }
         }
       } catch (err) {
         console.log(err as Error);
       } finally {
-        // 3. Cleanup images for the current batch to save disk space
+        // Cleanup images for the current batch to save disk space
         if (imagePaths?.length > 0) {
           cleanupFiles(imagePaths);
           console.log(
@@ -108,26 +127,25 @@ const worker = new Worker(
       }
     }
 
-    // 4. All batches are processed, now save the final record
+    // All batches are processed, now save the final record
     const recordToSave = {
       fileName: originalFileName,
-      extractedData: allExtractedData,
-      extractedTable: { cells: allTableCells },
+      extractedData: processedRows, // Pass the structured rows here
     };
 
     const savedRecord = await saveRecord(recordToSave as Partial<IRecord>);
     console.log(`[WORKER] Saved record ${savedRecord?._id} to database.`);
 
-    // 5. Generate the final Excel report
+    // Generate the final Excel report
     const excelFileName = await generateExcelFile(savedRecord);
     console.log(`[WORKER] Generated Excel report: ${excelFileName}`);
 
-    // 6. Update the record with the excel file name
+    // Update the record with the excel file name
     if (savedRecord) {
       await updateRecord(savedRecord._id.toString(), { excelFileName });
     }
 
-    // 7. Cleanup the original PDF file
+    // Cleanup the original PDF file
     cleanupFiles([pdfPath]);
     console.log(`[WORKER] Cleaned up original PDF file: ${pdfPath}`);
 

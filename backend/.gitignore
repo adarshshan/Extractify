@@ -8,6 +8,8 @@ dist/
 temp/
 uploads/
 
+googlekeyfortranslate.json
+
 # Environment variables
 .env
 

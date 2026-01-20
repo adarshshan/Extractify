@@ -34,12 +34,14 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - NODE_ENV=production
+      - GOOGLE_APPLICATION_CREDENTIALS=/usr/src/app/googlekeyfortranslate.json
     command: node dist/workers/index.js
     depends_on:
       - redis
     volumes:
       - ./backend/uploads:/usr/src/app/uploads
       - ./backend/temp:/usr/src/app/temp
+      - ./backend/googlekeyfortranslate.json:/usr/src/app/googlekeyfortranslate.json
     networks:
       - app-network
 

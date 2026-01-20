@@ -25,7 +25,7 @@ export interface IRecord extends Document {
   _id: Types.ObjectId; // Mongoose auto-generates this
   fileName: string;
   excelFileName?: string; // Add this line
-  extractedData?: Map<string, IExtractedField>; // ← legacy / form-like fields (optional now)
+  extractedData?: Array<Record<string, string>>; // Updated to array of objects for structured rows
   extractedTable?: IExtractedTable; // ← main tabular data (voter list, etc.)
   rawOcrResult?: any; // optional – for debugging only (can be large)
   createdAt?: Date;
@@ -75,9 +75,8 @@ const RecordSchema = new Schema<IRecord>(
     },
 
     extractedData: {
-      type: Map,
-      of: ExtractedFieldSchema,
-      default: () => new Map(),
+      type: [Schema.Types.Mixed], // Updated to array of mixed types (objects)
+      default: [],
     },
 
     extractedTable: {
