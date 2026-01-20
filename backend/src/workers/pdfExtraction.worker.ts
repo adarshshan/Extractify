@@ -17,7 +17,6 @@ import { translateText } from "../utils/translator"; // Import translator
 import { IRecord } from "../models/record.model";
 
 const BATCH_SIZE = 10; // Process 10 pages at a time. Configurable.
-const CONFIDENCE_THRESHOLD = 0.8;
 
 const worker = new Worker(
   PDF_EXTRACTION_JOB,
@@ -93,8 +92,8 @@ const worker = new Worker(
           // Process grouped rows into structured objects
           for (const rowData of currentPageTableData.values()) {
             const wardNo = electionWardNumber || listPartNumber || "";
-            const fullName = rowData["Voter's_Full_Name"] || "";
-            const fatherSpouseName = rowData["Parent/Spouse's_Name"] || "";
+            const fullName = rowData["Voter_Full_Name"] || "";
+            const fatherSpouseName = rowData["relative_name"] || "";
             const gender = rowData["Gender"] || "";
 
             const translatedFullName = await translateText(fullName);
@@ -102,7 +101,7 @@ const worker = new Worker(
               await translateText(fatherSpouseName);
 
             processedRows.push({
-              "Sl No.": rowData["S.No."] || "",
+              "Sl No.": rowData["SL_No"] || "",
               "Ward No.": wardNo,
               "House Number": rowData["House_Number"] || "",
               "Full Name": fullName,
