@@ -13,6 +13,7 @@ import { ocrImageWithNanoNets } from "../services/nanonets.service";
 import { saveRecord, updateRecord } from "../services/db.service";
 import { generateExcelFile } from "../services/excel.service";
 import { normalizeText } from "../utils/textNormalizer";
+import { translateText } from "../utils/translator"; // Import translator
 import { IRecord } from "../models/record.model";
 
 const BATCH_SIZE = 10; // Process 10 pages at a time. Configurable.
@@ -90,18 +91,29 @@ const worker = new Worker(
           });
 
           // Process grouped rows into structured objects
-          currentPageTableData.forEach((rowData: any) => {
+          for (const rowData of currentPageTableData.values()) {
+            const wardNo = electionWardNumber || listPartNumber || "";
+            const fullName = rowData["Voter's_Full_Name"] || "";
+            const fatherSpouseName = rowData["Parent/Spouse's_Name"] || "";
+            const gender = rowData["Gender"] || "";
+
+            const translatedFullName = await translateText(fullName);
+            const translatedFatherSpouseName =
+              await translateText(fatherSpouseName);
+
             processedRows.push({
               "Sl No.": rowData["S.No."] || "",
-              "Ward No.": electionWardNumber || listPartNumber || "", // Use listPartNumber, fallback to electionWardNumber if needed
+              "Ward No.": wardNo,
               "House Number": rowData["House_Number"] || "",
-              "Full Name": rowData["Voter's_Full_Name"] || "",
-              "Father/Spouse Name": rowData["Parent/Spouse's_Name"] || "",
-              Gender: rowData["Gender"] || "",
+              "Full Name": fullName,
+              "Full Name (En)": translatedFullName, // New translated field
+              "Father/Spouse Name": fatherSpouseName,
+              "Father/Spouse Name (En)": translatedFatherSpouseName, // New translated field
+              Gender: gender,
               "Card Number": rowData["Voter_ID"] || "",
               "Detail Code": rowData["Detail_Code"] || "",
             });
-          });
+          }
         }
       } catch (err) {
         console.log(err as Error);
